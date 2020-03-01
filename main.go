@@ -191,7 +191,7 @@ func ServeDataFallible(c *gin.Context) {
 func main() {
 	//UpdateTaskInfoDB()
 	//UpdateRecData()
-	//gin.SetMode(gin.ReleaseMode)
+	gin.SetMode(gin.ReleaseMode)
 	gin.DisableConsoleColor()
 
 	// Logging to a file.
@@ -239,5 +239,5 @@ func main() {
 		c.File("./sounds/" + audio)
 	})
 
-	router.Run(":5000")
+	router.Run(":4000")
 }
