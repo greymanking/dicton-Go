@@ -1,0 +1,44 @@
+package main
+
+import (
+	"fmt"
+	"net/http"
+	"strings"
+
+	"github.com/PuerkitoBio/goquery"
+)
+
+func PhoneticSpell(word string) (string, error) {
+	// Request the HTML page.
+	res, err := http.Get("https://dictionary.cambridge.org/dictionary/english-chinese-simplified/" + word)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return "", fmt.Errorf("status code error: %d %s", res.StatusCode, res.Status)
+	}
+
+	// Load the HTML document
+	doc, err := goquery.NewDocumentFromReader(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	uk := doc.Find("div.pos-header > span.uk > span.pron > span.ipa").First().Text()
+	us := doc.Find("div.pos-header > span.us > span.pron > span.ipa").First().Text()
+
+	var itg []string
+
+	if uk != "" {
+		uk = strings.Replace(uk, ".", "", -1)
+		uk = "英[" + uk + "]"
+		itg = append(itg, uk)
+	}
+	if us != "" {
+		us = strings.Replace(us, ".", "", -1)
+		us = "美[" + us + "]"
+		itg = append(itg, us)
+	}
+	return strings.Join(itg, " "), nil
+}

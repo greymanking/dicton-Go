@@ -1,0 +1,91 @@
+package main
+
+import (
+	"fmt"
+	"strings"
+)
+
+type Totals struct {
+	TotalF int
+	TotalS int
+}
+
+func UpdateTaskInfo() {
+	var tasklist []Task
+	dbg.Find(&tasklist)
+
+	for _, task := range tasklist {
+		word := task.Keys
+
+		p, e := PhoneticSpell(word)
+
+		if e == nil {
+			if p == "" && !strings.Contains(word, " ") {
+				fmt.Printf("%s音标未找到", word)
+				continue
+			}
+
+			fmt.Printf("%s %s\n", word, p)
+		} else {
+			fmt.Println(e)
+		}
+	}
+}
+
+func UpdateTaskInfoDB() {
+	var tasklist []Task
+	dbg.Where("phonetic='' or phonetic is null").Find(&tasklist)
+
+	for _, task := range tasklist {
+		word := task.Keys
+		p, e := PhoneticSpell(word)
+
+		if e != nil {
+			fmt.Println(e)
+			return
+		}
+
+		fmt.Println(word, p)
+
+		task.Phonetic = p
+
+		dbg.Save(&task)
+	}
+
+}
+
+func UpdateRecData() {
+	var reclist []Record
+	dbg.Find(&reclist)
+
+	var cache = make(map[uint]map[uint]Totals)
+
+	for i := 0; i < len(reclist); i++ {
+		rec := reclist[i]
+		if _, ok := cache[rec.UserID]; !ok {
+			cache[rec.UserID] = make(map[uint]Totals)
+		}
+		idslot := cache[rec.UserID]
+		if _, ok := idslot[rec.TaskID]; !ok {
+			idslot[rec.TaskID] = Totals{}
+		}
+
+		totals := idslot[rec.TaskID]
+
+		if rec.Status%2 == 0 {
+			rec.Status = DictFalse | PuzzleSuccess
+			totals.TotalF++
+		} else {
+			rec.Status = DictSuccess | PuzzleSuccess
+			totals.TotalS++
+		}
+
+		rec.TotalF = totals.TotalF
+		rec.TotalS = totals.TotalS
+		rec.TotalA = totals.TotalF + totals.TotalS
+
+		dbg.Save(&rec)
+
+		cache[rec.UserID][rec.TaskID] = totals
+	}
+}
